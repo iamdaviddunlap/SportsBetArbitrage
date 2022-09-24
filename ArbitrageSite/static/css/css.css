@@ -10,6 +10,11 @@
     padding-top: 20px;
 }
 
+#sidebar-bottom {
+  position: fixed;
+  bottom: 100px;
+}
+
 .textinput {
     color: white;
     width: 75%;
@@ -20,6 +25,10 @@
     text-decoration: none;
     color: white;
     display: block;
+}
+
+.custom-sidenav label {
+    color: white;
 }
 
 #update-freq {

@@ -1,14 +1,2 @@
-  document.addEventListener('DOMContentLoaded', function() {
-    var elems = document.querySelectorAll('.sidenav');
-    var instances = M.Sidenav.init(elems, options);
-  });
 
-  // Initialize collapsible (uncomment the lines below if you use the dropdown variation)
-  // var collapsibleElem = document.querySelector('.collapsible');
-  // var collapsibleInstance = M.Collapsible.init(collapsibleElem, options);
-
-  // Or with jQuery
-
-  $(document).ready(function(){
-    $('.sidenav').sidenav();
-  });
+response = [{'sport': 'CFL', 'arb_games': []}, {'sport': 'NCAAF', 'arb_games': [{'home': 'Washington State Cougars', 'away': 'Oregon Ducks', 'expected_profit': 138.99, 'worst_case_profit': 134.0, 'home_bookmaker': {'name': 'barstool', 'odds_eu': 13.0, 'odds_us': 1200, 'bet': 18}, 'away_bookmaker': {'name': 'fanduel', 'odds_eu': 2.95, 'odds_us': 195, 'bet': 82}}, {'home': 'California Golden Bears', 'away': 'Arizona Wildcats', 'expected_profit': 1.15, 'worst_case_profit': 0.08, 'home_bookmaker': {'name': 'bovada', 'odds_eu': 1.59, 'odds_us': -169, 'bet': 64}, 'away_bookmaker': {'name': 'fanduel', 'odds_eu': 2.78, 'odds_us': 178, 'bet': 36}}, {'home': 'Old Dominion Monarchs', 'away': 'Arkansas State Red Wolves', 'expected_profit': 0.94, 'worst_case_profit': 0.65, 'home_bookmaker': {'name': 'draftkings', 'odds_eu': 2.6, 'odds_us': 160, 'bet': 39}, 'away_bookmaker': {'name': 'bovada', 'odds_eu': 1.65, 'odds_us': -154, 'bet': 61}}, {'home': 'East Carolina Pirates', 'away': 'Navy Midshipmen', 'expected_profit': 4.03, 'worst_case_profit': 3.6, 'home_bookmaker': {'name': 'fanduel', 'odds_eu': 1.48, 'odds_us': -208, 'bet': 70}, 'away_bookmaker': {'name': 'barstool', 'odds_eu': 3.5, 'odds_us': 250, 'bet': 30}}, {'home': 'Houston Cougars', 'away': 'Rice Owls', 'expected_profit': 4.97, 'worst_case_profit': 4.4, 'home_bookmaker': {'name': 'draftkings', 'odds_eu': 1.45, 'odds_us': -222, 'bet': 72}, 'away_bookmaker': {'name': 'fanduel', 'odds_eu': 3.8, 'odds_us': 280, 'bet': 28}}, {'home': 'Troy Trojans', 'away': 'Marshall Thundering Herd', 'expected_profit': 6.23, 'worst_case_profit': 5.64, 'home_bookmaker': {'name': 'draftkings', 'odds_eu': 1.39, 'odds_us': -256, 'bet': 76}, 'away_bookmaker': {'name': 'fanduel', 'odds_eu': 4.5, 'odds_us': 350, 'bet': 24}}]}, {'sport': 'NFL', 'arb_games': []}, {'sport': 'MLB', 'arb_games': [{'home': 'Cincinnati Reds', 'away': 'Milwaukee Brewers', 'expected_profit': 4.49, 'worst_case_profit': 4.49, 'home_bookmaker': {'name': 'draftkings', 'odds_eu': 5.5, 'odds_us': 450, 'bet': 19}, 'away_bookmaker': {'name': 'bovada', 'odds_eu': 1.29, 'odds_us': -345, 'bet': 81}}, {'home': 'Baltimore Orioles', 'away': 'Houston Astros', 'expected_profit': 17.47, 'worst_case_profit': 16.6, 'home_bookmaker': {'name': 'fanduel', 'odds_eu': 5.3, 'odds_us': 430, 'bet': 22}, 'away_bookmaker': {'name': 'draftkings', 'odds_eu': 1.51, 'odds_us': -196, 'bet': 78}}]}, {'sport': 'NBA', 'arb_games': []}, {'sport': 'CPLT20', 'arb_games': []}, {'sport': 'ICC World Cup', 'arb_games': []}, {'sport': 'International Twenty20', 'arb_games': []}, {'sport': 'NHL', 'arb_games': []}, {'sport': 'MMA', 'arb_games': []}]
