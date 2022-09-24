@@ -1,0 +1,41 @@
+.custom-sidenav {
+    height: 100%;
+    width: 20%;
+    position: fixed;
+    z-index: 1;
+    top: 0;
+    left: 0;
+    background-color: #111;
+    overflow-x: hidden;
+    padding-top: 20px;
+}
+
+.textinput {
+    color: white;
+    width: 75%;
+}
+
+.custom-sidenav p {
+    padding: 6px 8px 6px 16px;
+    text-decoration: none;
+    color: white;
+    display: block;
+}
+
+#update-freq {
+    width: 50%;
+}
+
+.custom-sidenav a:hover {
+    color: #f1f1f1;
+}
+
+.main {
+    margin-left: 20%; /* Same as the width of the sidenav */
+    padding: 0px 10px;
+}
+
+@media screen and (max-height: 450px) {
+    .custom-sidenav {padding-top: 15px;}
+    .custom-sidenav a {font-size: 18px;}
+}

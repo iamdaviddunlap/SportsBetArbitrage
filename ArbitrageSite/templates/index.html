@@ -1,0 +1,74 @@
+  <!DOCTYPE html>
+  <html>
+    <head>
+      <!--Import Google Icon Font-->
+      <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+      <!--Import materialize.css-->
+      <link type="text/css" rel="stylesheet" href="static/css/materialize.min.css" media="screen,projection"/>
+      <link type="text/css" rel="stylesheet" href="static/css/css.css"/>
+      <!--Import jQuery-->
+      <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+
+      <!--Let browser know website is optimized for mobile-->
+      <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    </head>
+
+    <body>
+
+    <div class="custom-sidenav">
+        <form action="/submit-api-info">
+          <p>API Key:</p>
+          <input type="text" class="textinput" id="apikey" name="apikey" value="{{api_key}}"><br>
+          <p class="range-field">
+            Update Frequency (seconds):<br/>
+            <input type="range" id="update-freq" name="update-freq" min="10" max="120" step="10" value="{{update_freq}}"/>
+          </p>
+
+           <button class="btn waves-effect waves-light" type="submit" name="action">Submit</button>
+        </form>
+    </div>
+
+    <div class="main">
+      <h1>Arbitrage Finder</h1>
+
+      <div class="col s12">
+        <h4>NBA</h4>
+        <div class="card horizontal">
+          <div class="card-content">
+            <p>I am a very simple card. I am good at containing small bits of information.</p>
+          </div>
+        </div>
+
+        <div class="card horizontal">
+          <div class="card-content">
+            <p>I am a very simple card. I am good at containing small bits of information.</p>
+          </div>
+        </div>
+      </div>
+
+      <hr style="height:3px; color:black; background-color:black;" />
+
+      <div class="col s12">
+        <h4>NFL</h4>
+        <div class="card horizontal">
+          <div class="card-content">
+            <p>I am a very simple card. I am good at containing small bits of information.</p>
+          </div>
+        </div>
+
+        <div class="card horizontal">
+          <div class="card-content">
+            <p>I am a very simple card. I am good at containing small bits of information.</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+
+
+      <!--JavaScript at end of body for optimized loading-->
+      <script type="text/javascript" src="static/js/materialize.min.js"></script>
+      <script type="text/javascript" src="static/js/core_js.js"></script>
+    </body>
+  </html>
