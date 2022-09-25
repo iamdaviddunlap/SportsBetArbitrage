@@ -64,6 +64,20 @@ function call_api() {
             success: function(res) {
                 console.log(res);
                 process_response(res);
+            },
+            error: function(res) {
+                // Turn OFF the pulling
+                pulling = false;
+                $("#toggle-pulls-bttn").removeClass('red');
+                $("#toggle-pulls-bttn").addClass('green');
+                $("#toggle-pulls-bttn").text('Start');
+                handleInterval();
+
+                if(res.responseText.includes('Request quota has been reached')) {
+                    $("#requests-left").text('Requests left with API Key: 0');
+                }
+
+                alert(res.responseText);
             }
         });
         lockout = false;

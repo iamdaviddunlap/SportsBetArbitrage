@@ -46,8 +46,12 @@ def form_submit():
 
 @app.route("/query-arbitrage")
 def query_arbitrage():
-    arb_obj, remaining_requests = find_arbs(params['api_key'], config['approved_bookmakers'], params['sports_to_check'],
-                                            params['total_bet'], params['rounding_dollars'], sports_info)
+    try:
+        arb_obj, remaining_requests = find_arbs(params['api_key'], config['approved_bookmakers'],
+                                                params['sports_to_check'], params['total_bet'],
+                                                params['rounding_dollars'], sports_info)
+    except Exception as e:
+        return str(e), 401  # TODO will there ever be any other status code?
     return {'arb_obj': arb_obj, 'remaining_requests': remaining_requests}
 
 

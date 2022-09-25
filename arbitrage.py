@@ -29,6 +29,8 @@ def find_arbs(api_key, approved_bookmakers, approved_sports, total_bet, rounding
         games_json = res.json()
 
         remaining_requests = int(res.headers['x-requests-remaining'])
+        if remaining_requests == 0:
+            raise Exception(res.json()['message'])
 
         for game_json in games_json:
             home_team_odds = {}
