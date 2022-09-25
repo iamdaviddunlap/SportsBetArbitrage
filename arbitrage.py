@@ -7,27 +7,28 @@ import requests
 # TODO maybe also calculate the minimum odds to still have arbitrage in case of bookies shifting prices before I get to them
 
 
-def find_arbs(api_key, approved_bookmakers, approved_sports, total_bet, rounding_dollars):
+def find_arbs(api_key, approved_bookmakers, approved_sports, total_bet, rounding_dollars, sports_info):
 
     output_obj = []
+    remaining_requests = -1
 
-    for sport in approved_sports:
+    for sport_key in approved_sports:
 
-        base_url = f'https://api.the-odds-api.com'
-        specific_sport_url = f'{base_url}/v4/sports/{sport}/odds?regions=us&markets=h2h&oddsFormat=decimal&apiKey={api_key}'
-        res = requests.get(specific_sport_url)
-        games_json = res.json()
-
-        remaining_requests = int(res.headers['x-requests-remaining'])
-
-        sport_title = games_json[0]["sport_title"]
+        sport_title = sports_info[sport_key]
         print(f'Analyzing {sport_title}...')
 
         sport_obj = {
             'sport_title': sport_title,
-            'sport_id': games_json[0]["sport_key"],
+            'sport_id': sport_key,
             'arb_games': []
         }
+
+        base_url = f'https://api.the-odds-api.com'
+        specific_sport_url = f'{base_url}/v4/sports/{sport_key}/odds?regions=us&markets=h2h&oddsFormat=decimal&apiKey={api_key}'
+        res = requests.get(specific_sport_url)
+        games_json = res.json()
+
+        remaining_requests = int(res.headers['x-requests-remaining'])
 
         for game_json in games_json:
             home_team_odds = {}
@@ -131,7 +132,7 @@ def find_arbs(api_key, approved_bookmakers, approved_sports, total_bet, rounding
                 sport_obj['arb_games'].append(game_obj)
         sport_obj['arb_games'] = sorted(sport_obj['arb_games'], key=lambda x: x['worst_case_profit'], reverse=True)
         output_obj.append(sport_obj)
-    return output_obj
+    return output_obj, remaining_requests
 
 
 if __name__ == '__main__':
@@ -139,9 +140,11 @@ if __name__ == '__main__':
 
     with open('config.json') as f:
         config = json.loads(f.read())
+    with open('sports.json') as f:
+        sports_info = json.loads(f.read())
     approved_bookmakers = config['approved_bookmakers']
     approved_sports = config['approved_sports']
 
-    res = find_arbs(api_key, approved_bookmakers, approved_sports, total_bet=100, rounding_dollars=1)
+    res = find_arbs(api_key, approved_bookmakers, approved_sports, total_bet=100, rounding_dollars=1, sports_info=sports_info)
 
     x = 1

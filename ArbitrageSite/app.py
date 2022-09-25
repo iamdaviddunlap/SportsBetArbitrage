@@ -46,8 +46,9 @@ def form_submit():
 
 @app.route("/query-arbitrage")
 def query_arbitrage():
-    # TODO
-    return []
+    arb_obj, remaining_requests = find_arbs(params['api_key'], config['approved_bookmakers'], params['sports_to_check'],
+                                            params['total_bet'], params['rounding_dollars'], sports_info)
+    return {'arb_obj': arb_obj, 'remaining_requests': remaining_requests}
 
 
 if __name__ == "__main__":
