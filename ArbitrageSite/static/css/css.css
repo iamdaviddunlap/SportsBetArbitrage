@@ -5,19 +5,22 @@
     z-index: 1;
     top: 0;
     left: 0;
+    color: white;
     background-color: #111;
     overflow-x: hidden;
+    overflow-y: scroll;
     padding-top: 20px;
 }
 
 #sidebar-bottom {
-  position: fixed;
-  bottom: 100px;
+  bottom: 0;
+    overflow-y: auto;
+    max-height:100%;
 }
 
 .textinput {
     color: white;
-    width: 75%;
+    margin-left: 10px;
 }
 
 .custom-sidenav p {
@@ -32,7 +35,7 @@
 }
 
 #update-freq {
-    width: 50%;
+    width: 60%;
 }
 
 .custom-sidenav a:hover {

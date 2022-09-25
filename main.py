@@ -41,10 +41,10 @@ def find_arbs(api_key, sports, total_bet, rounding_dollars):
                                 odds = (1 / outcome['price']) * 100
                                 if outcome['name'] == game_json['home_team']:
                                     # These are the odds for the home team
-                                    home_team_odds[bookmaker['key']] = odds
+                                    home_team_odds[bookmaker['title']] = odds
                                 elif outcome['name'] == game_json['away_team']:
                                     # These are the odds for the away team
-                                    away_team_odds[bookmaker['key']] = odds
+                                    away_team_odds[bookmaker['title']] = odds
                                 else:
                                     print(f'Found neither away nor home! Name: {outcome["name"]}')
 
@@ -131,6 +131,7 @@ def find_arbs(api_key, sports, total_bet, rounding_dollars):
                     },
                 }
                 sport_obj['arb_games'].append(game_obj)
+        sport_obj['arb_games'] = sorted(sport_obj['arb_games'], key=lambda x: x['worst_case_profit'], reverse=True)
         output_obj.append(sport_obj)
     return output_obj
 
@@ -142,7 +143,9 @@ if __name__ == '__main__':
                        'basketball_nba', 'cricket_caribbean_premier_league', 'cricket_icc_world_cup',
                        'cricket_international_t20', 'icehockey_nhl', 'mma_mixed_martial_arts']
     # approved_sports = ['americanfootball_cfl', 'americanfootball_ncaaf', 'americanfootball_nfl', 'baseball_mlb', 'basketball_nba', 'icehockey_nhl']
+
     res = find_arbs(api_key, approved_sports, total_bet=100, rounding_dollars=1)
+
     x = 1
 
 # a = [
