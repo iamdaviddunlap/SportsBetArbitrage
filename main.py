@@ -18,7 +18,8 @@ def find_arbs(api_key, sports, total_bet, rounding_dollars):
         print(f'Analyzing {sport_title}...')
 
         sport_obj = {
-            'sport': sport_title,
+            'sport_title': sport_title,
+            'sport_id': games_json[0]["sport_key"],
             'arb_games': []
         }
 
