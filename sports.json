@@ -1,0 +1,14 @@
+{
+    "americanfootball_cfl": "CFL",
+    "americanfootball_ncaaf": "NCAAF",
+    "americanfootball_nfl": "NFL",
+    "baseball_mlb": "MLB",
+    "basketball_nba": "NBA",
+    "cricket_caribbean_premier_league": "CPLT20",
+    "cricket_icc_world_cup": "ICC World Cup",
+    "cricket_international_t20": "International Twenty20",
+    "icehockey_nhl": "NHL",
+    "icehockey_sweden_hockey_league": "SHL",
+    "mma_mixed_martial_arts": "MMA",
+    "rugbyleague_nrl": "NRL"
+}
