@@ -8,6 +8,7 @@ let lockout = false;  // This is set to true when calling the api to prevent it 
 let intervalId = null;  // There is no interval running at program start
 
 $(document).ready(function(){
+
     $("#toggle-pulls-bttn").click(function(){
         if(pulling) {
             // This means we are turning OFF the pulling
@@ -21,7 +22,7 @@ $(document).ready(function(){
             pulling = true;
             $("#toggle-pulls-bttn").removeClass('green');
             $("#toggle-pulls-bttn").addClass('red');
-            $("#toggle-pulls-bttn").text('Pause');
+            $("#toggle-pulls-bttn").text('Stop');
             handleInterval();
         }
     });
@@ -35,13 +36,25 @@ function handleInterval() {
     if(pulling) {
         // This means we are turning ON the pulling
         console.log('turning on pulling');
+        let next_date = new Date();
+        next_date = next_date.setSeconds(next_date.getSeconds() + update_freq);
+
+        $("#next-refresh").text('Next refresh: '+new Date(next_date).toLocaleTimeString());
         intervalId = window.setInterval(function(){
-          call_api();
+            let cur_date = new Date();
+            let next_date = new Date();
+            next_date = next_date.setSeconds(next_date.getSeconds() + update_freq);
+            $("#last-refresh").text('Last refresh: '+new Date(cur_date).toLocaleTimeString());
+            $("#next-refresh").text('Next refresh: '+new Date(next_date).toLocaleTimeString());
+
+            call_api();
         }, update_freq*1000);
     } else {
         // This means we are turning OFF the pulling
         console.log('turning off pulling');
         clearInterval(intervalId);
+        $("#last-refresh").text('Last refresh:');
+        $("#next-refresh").text('Next refresh:');
     }
 }
 
@@ -49,9 +62,19 @@ function handleInterval() {
 function call_api() {
     if(!lockout) {
         lockout = true;
-        console.log('pretenting to call api');
+        $.ajax({
+            url: "/query-arbitrage",
+            type: 'GET',
+            dataType: 'json',
+            success: function(res) {
+                console.log(res);
+                process_response(res);
+            }
+        });
+        lockout = false;
+    } else {
+        console.log('Ignoring call to call_api() because of lockout');
     }
-    lockout = false;
 }
 
 

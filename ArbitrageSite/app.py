@@ -44,5 +44,11 @@ def form_submit():
     return redirect('/')
 
 
+@app.route("/query-arbitrage")
+def query_arbitrage():
+    # TODO
+    return []
+
+
 if __name__ == "__main__":
     app.run()
