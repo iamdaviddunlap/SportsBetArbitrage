@@ -1,6 +1,7 @@
 .custom-sidenav {
     height: 100%;
     width: 20%;
+    min-width: 200px;
     position: fixed;
     z-index: 1;
     top: 0;

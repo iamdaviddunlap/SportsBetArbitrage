@@ -1,11 +1,17 @@
+import json
 import requests
 
+# TODO also search for +EV opportunities
+#  (do the expected value computation for each listing and very occasionally it might be positive)
 
-def find_arbs(api_key, sports, total_bet, rounding_dollars):
+# TODO maybe also calculate the minimum odds to still have arbitrage in case of bookies shifting prices before I get to them
+
+
+def find_arbs(api_key, approved_bookmakers, approved_sports, total_bet, rounding_dollars):
 
     output_obj = []
 
-    for sport in sports:
+    for sport in approved_sports:
 
         base_url = f'https://api.the-odds-api.com'
         specific_sport_url = f'{base_url}/v4/sports/{sport}/odds?regions=us&markets=h2h&oddsFormat=decimal&apiKey={api_key}'
@@ -22,9 +28,6 @@ def find_arbs(api_key, sports, total_bet, rounding_dollars):
             'sport_id': games_json[0]["sport_key"],
             'arb_games': []
         }
-
-        # approved_bookmakers = ['barstool', 'betfair', 'betmgm', 'betonlineag', 'betrivers', 'betus', 'bovada', 'draftkings', 'fanduel', 'gtbets', 'intertops', 'lowvig', 'mybookieag', 'pointsbetus', 'sugarhouse', 'superbook', 'unibet', 'williamhill_us', 'wynnbet']
-        approved_bookmakers = ['draftkings', 'fanduel', 'barstool', 'betrivers', 'bovada']
 
         for game_json in games_json:
             home_team_odds = {}
@@ -59,11 +62,6 @@ def find_arbs(api_key, sports, total_bet, rounding_dollars):
                     total = home_odds + away_odds
                     if total < 99.5 and home_odds > 5 and away_odds > 5:
                         found_arb = True
-
-                        # Calculate investment amounts
-                        # TODO want to round these before actually investing
-                        # total_bet = 100
-                        # rounding_dollars = 1
 
                         home_bet = (total_bet * home_odds) / total
                         away_bet = (total_bet * away_odds) / total
@@ -139,39 +137,11 @@ def find_arbs(api_key, sports, total_bet, rounding_dollars):
 if __name__ == '__main__':
     api_key = 'aba9be41bd7166af142232eca6e1e960'
 
-    approved_sports = ['americanfootball_cfl', 'americanfootball_ncaaf', 'americanfootball_nfl', 'baseball_mlb',
-                       'basketball_nba', 'cricket_caribbean_premier_league', 'cricket_icc_world_cup',
-                       'cricket_international_t20', 'icehockey_nhl', 'mma_mixed_martial_arts']
-    # approved_sports = ['americanfootball_cfl', 'americanfootball_ncaaf', 'americanfootball_nfl', 'baseball_mlb', 'basketball_nba', 'icehockey_nhl']
+    with open('config.json') as f:
+        config = json.loads(f.read())
+    approved_bookmakers = config['approved_bookmakers']
+    approved_sports = config['approved_sports']
 
-    res = find_arbs(api_key, approved_sports, total_bet=100, rounding_dollars=1)
+    res = find_arbs(api_key, approved_bookmakers, approved_sports, total_bet=100, rounding_dollars=1)
 
     x = 1
-
-# a = [
-#
-#     {
-#         'sport': 'NBA',
-#         'arb_games': [
-#             {
-#                 'home': ' South Alabama Jaguars',
-#                 'away': 'Louisiana Tech Bulldogs',
-#                 'expected_profit': '8.83',
-#                 'worst_case_profit': '4.0',
-#                 'home_bookmaker': {
-#                     'name': 'fanduel',
-#                     'odds_eu': '1.19',
-#                     'odds_us': '-526',
-#                     'bet': '92'
-#                 },
-#                 'away_bookmaker': {
-#                     'name': 'draftkings',
-#                     'odds_eu': '13.0',
-#                     'odds_us': '1200',
-#                     'bet': '8'
-#                 }
-#             }
-#         ]
-#     },
-#
-# ]
