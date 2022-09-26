@@ -23,6 +23,25 @@ $(document).ready(function(){
             handleInterval();
         }
     });
+
+    $("#select-all").click(function(){
+        let checkbox_items = $('#checkboxes').children();
+        checkbox_items.each(i => {
+            let p_child = checkbox_items[i];
+            let input_obj = p_child.children[0].children[0];
+            $(input_obj).prop('checked', true);
+        });
+    });
+
+    $("#deselect-all").click(function(){
+        let checkbox_items = $('#checkboxes').children();
+        checkbox_items.each(i => {
+            let p_child = checkbox_items[i];
+            let input_obj = p_child.children[0].children[0];
+            $(input_obj).prop('checked', false);
+        });
+    });
+
 });
 
 

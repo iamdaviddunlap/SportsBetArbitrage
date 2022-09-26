@@ -37,19 +37,25 @@
 
           <p>Sports to Check:</p>
 
-          {% for sport_key in approved_sports %}
-            <p>
-              <label>
+          <div id="checkboxes">
+            {% for sport_key in approved_sports %}
+              <p>
+                <label>
 
-                {% if sport_key in sports_to_check %}
-                  <input type="checkbox" class="filled-in" checked="checked" name="{{sport_key}}"/>
-                {% else %}
-                  <input type="checkbox" class="filled-in" name="{{sport_key}}"/>
-                {% endif %}
-                <span>{{sports_info[sport_key]}}</span>
-              </label>
-            </p>
-          {% endfor %}
+                  {% if sport_key in sports_to_check %}
+                    <input type="checkbox" class="filled-in" checked="checked" name="{{sport_key}}"/>
+                  {% else %}
+                    <input type="checkbox" class="filled-in" name="{{sport_key}}"/>
+                  {% endif %}
+                  <span>{{sports_info[sport_key]}}</span>
+                </label>
+              </p>
+            {% endfor %}
+          </div>
+
+          <a class="waves-effect waves-light btn-small" id="select-all">Select All</a>&nbsp;
+          <a class="waves-effect waves-light btn-small" id="deselect-all">Deselect All</a>
+          <br/><br/>
 
            <button class="btn waves-effect waves-light" id="form-submit" type="submit" name="action">Submit</button>
         </form>
