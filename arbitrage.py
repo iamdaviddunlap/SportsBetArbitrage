@@ -86,15 +86,15 @@ def find_arbs(api_key, approved_bookmakers, approved_sports, total_bet, rounding
                         worst_case_profit = min(home_win_payout, away_win_payout) - total_bet
                         worst_case_profit = round(worst_case_profit, 2)
 
-                        if worst_case_profit < 0:
-                            x = 1
-
                         eu_home_odds = round(100 / home_odds, 2)
                         eu_away_odds = round(100 / away_odds, 2)
                         us_home_odds = round(100 * (eu_home_odds - 1)) if eu_home_odds >= 2.0 else round(
                             -100 / (eu_home_odds - 1))
                         us_away_odds = round(100 * (eu_away_odds - 1)) if eu_away_odds >= 2.0 else round(
                             -100 / (eu_away_odds - 1))
+
+                        if worst_case_profit < 0:
+                            print(f'Debugging negative worst case. home odds: {home_odds} (eu home odds: {eu_home_odds}), away odds: {away_odds} (eu away odds: {eu_away_odds}), total: {total}')
 
                         if worst_case_profit > best_arb_worst_case:
                             best_arb_worst_case = worst_case_profit

@@ -45,22 +45,26 @@ $(document).ready(function(){
 });
 
 
+function updateRefreshes() {
+    let cur_date = new Date();
+    let next_date = new Date();
+    next_date = next_date.setSeconds(next_date.getSeconds() + update_freq);
+    $("#last-refresh").text('Last refresh: ' + new Date(cur_date).toLocaleTimeString());
+    $("#next-refresh").text('Next refresh: ' + new Date(next_date).toLocaleTimeString());
+}
+
+
 function handleInterval() {
     /* This function is called when there is a change to the interval (i.e. the toggle button was clicked) */
     if(pulling) {
         // This means we are turning ON the pulling
         console.log('turning on pulling');
-        let next_date = new Date();
-        next_date = next_date.setSeconds(next_date.getSeconds() + update_freq);
 
-        $("#next-refresh").text('Next refresh: '+new Date(next_date).toLocaleTimeString());
+        updateRefreshes();
+        call_api(); // Call the function right at the start
+
         intervalId = window.setInterval(function(){
-            let cur_date = new Date();
-            let next_date = new Date();
-            next_date = next_date.setSeconds(next_date.getSeconds() + update_freq);
-            $("#last-refresh").text('Last refresh: '+new Date(cur_date).toLocaleTimeString());
-            $("#next-refresh").text('Next refresh: '+new Date(next_date).toLocaleTimeString());
-
+            updateRefreshes();
             call_api();
         }, update_freq*1000);
     } else {
