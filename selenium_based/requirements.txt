@@ -1,0 +1,10 @@
+requests
+PyYAML
+selenium
+selenium-wire
+undetected-chromedriver
+chromedriver-autoinstaller
+selenium-stealth
+tqdm
+beautifulsoup4
+fake-useragent
