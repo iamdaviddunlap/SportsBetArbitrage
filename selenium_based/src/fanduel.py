@@ -15,6 +15,7 @@ import ast
 import gzip
 import json
 import re
+import time
 from time import sleep
 from bs4 import BeautifulSoup
 import datetime
@@ -84,6 +85,62 @@ def beautifulsoup_obj_to_selenium(bs_obj, driver):
         return sel_objs[0]
 
 
+def is_relevant_button_alttxt(tag_element):
+    return 'to win' in tag_element.attrs['aria-label'] or 'Moneyline' in tag_element.attrs['aria-label']
+
+
+def parse_page(driver):
+    html = driver.page_source
+    soup = BeautifulSoup(html, 'html.parser')
+    buttons = soup.findAll('div', {'role': 'button'})
+
+    all_relevant_buttons = []
+    parent_ul = None
+
+    # Create the buttons_dict that links button objects with the keys from the getMarketPrices requests
+    for button_tag in buttons:
+        if 'aria-label' in button_tag.attrs.keys() and is_relevant_button_alttxt(button_tag):
+            all_relevant_buttons.append(button_tag)
+            if parent_ul is None:
+                parent_ul = button_tag.find_parent('ul')
+
+    # We can assume that the first element of the ul will contain the sport's title
+    sport_name_class_set = set(parent_ul.next.next.attrs['class'])
+    cur_sport = None
+    list_parents = [x.find_parent('li') for x in all_relevant_buttons]
+    games_dict = dict()
+    for li_item in parent_ul.children:
+        if set(li_item.next.attrs['class']) == sport_name_class_set:
+            # This li_item is the name of a new sport
+            cur_sport = str(list(li_item.descendants)[-1])
+            if cur_sport not in games_dict:  # Check if the sport is already a key in games_dict
+                games_dict[cur_sport] = []  # If not, create an empty list for it
+        else:
+            if li_item in list_parents:
+                accessible_divs = li_item.find_all('div', attrs={"aria-label": True, "aria-hidden": False})
+                accessible_spans = li_item.find_all('span', attrs={"aria-label": True, "aria-hidden": False})
+
+                cur_relevant_buttons = [x for x in accessible_divs if is_relevant_button_alttxt(x)]
+                cur_relevant_labels = [x for x in accessible_spans if any(x.attrs['aria-label'] in s for s in [x.attrs['aria-label'] for x in cur_relevant_buttons])]
+
+                if len(cur_relevant_buttons) != len(cur_relevant_labels):
+                    raise Exception(f'Mismatch when parsing. Got a different number of button and label elements. '
+                                    f'Buttons: \n{cur_relevant_buttons}\nLabels: \n{cur_relevant_labels}')
+
+                odds_list = []
+                for x in cur_relevant_buttons:
+                    odds = None if 'aria-disabled' in x.attrs else str(list(x.descendants)[-1])
+                    if odds is not None and len(odds) > 6:
+                        odds = str(list(x.next.descendants)[-1])
+                    odds_list.append(odds)
+
+                cur_game_dict = dict()
+                for i in range(len(cur_relevant_buttons)):
+                    cur_game_dict[cur_relevant_labels[i].attrs['aria-label']] = odds_list[i]
+                games_dict[cur_sport].append(cur_game_dict)
+    return games_dict
+
+
 def main():
     driver = get_driver()
 
@@ -98,7 +155,8 @@ def main():
     html = driver.page_source
     soup = BeautifulSoup(html, 'html.parser')
     buttons = soup.findAll('div', {'role': 'button'})
-    watch_live_button = [x for x in buttons  if 'aria-label' in x.attrs.keys() and 'Watch Live' in x.attrs['aria-label']][0]
+    # watch_live_button = [x for x in buttons  if 'aria-label' in x.attrs.keys() and 'Watch Live' in x.attrs['aria-label']][0]  TODO put back
+    watch_live_button = [x for x in buttons  if 'aria-label' in x.attrs.keys() and 'Baseball' in x.attrs['aria-label']][0]
     watch_live_button = beautifulsoup_obj_to_selenium(watch_live_button, driver)
     watch_live_button.click()
 
@@ -109,24 +167,18 @@ def main():
             (By.XPATH, "//span[contains(@style, 'background-color: rgb(0, 95, 200);')]"))
     )
 
-    html = driver.page_source
-    soup = BeautifulSoup(html, 'html.parser')
-    buttons = soup.findAll('div', {'role': 'button'})
+    history = None
+    while True:
+        start = time.time()
+        games_dict = parse_page(driver)
+        if history is None or history != games_dict:
+            history = games_dict
+            print(f'Refreshed in {round(time.time()-start, 3)}s. games_dict:\n{games_dict}')
+        x = 1
+    x = 1
 
-    # Extract the price_dict info from the getMarketPrices requests
-    reqs = driver.requests
-    most_recent_req = [x for x in reqs if 'getMarketPrices' in x.url][-1]
-    price_json = json.loads(gzip.decompress(most_recent_req.response.body).decode('utf-8'))
-    price_dict = {x['marketId']: [y['winRunnerOdds']['americanDisplayOdds']['americanOddsInt'] for y in x['runnerDetails']] for x in price_json}
 
-    # Create the buttons_dict that links button objects with the keys from the getMarketPrices requests
-    buttons_dict = {k: [None]*2 for k in price_dict.keys()}
-    for button_tag in buttons:
-        if 'aria-label' in button_tag.attrs.keys() and ('to win' in button_tag.attrs['aria-label'] or 'Moneyline' in button_tag.attrs['aria-label']):
-            odds_amount = int(button_tag.next.next)
-            for market_id, odds_lst in price_dict.items():
-                if odds_amount in odds_lst:
-                    buttons_dict[market_id][odds_lst.index(odds_amount)] = button_tag
+
 
     # While loop to look for updates to the price_dict
     last_date = datetime.datetime.now()
