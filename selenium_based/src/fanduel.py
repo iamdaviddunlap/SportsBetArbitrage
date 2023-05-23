@@ -113,6 +113,7 @@ def parse_page(driver):
         if set(li_item.next.attrs['class']) == sport_name_class_set:
             # This li_item is the name of a new sport
             cur_sport = str(list(li_item.descendants)[-1])
+            cur_sport = ' '.join([x for x in cur_sport.split(' ') if x.lower() != 'live'])
             if cur_sport not in games_dict:  # Check if the sport is already a key in games_dict
                 games_dict[cur_sport] = []  # If not, create an empty list for it
         else:
@@ -170,10 +171,13 @@ def main():
     history = None
     while True:
         start = time.time()
-        games_dict = parse_page(driver)
-        if history is None or history != games_dict:
-            history = games_dict
-            print(f'Refreshed in {round(time.time()-start, 3)}s. games_dict:\n{games_dict}')
+        try:
+            games_dict = parse_page(driver)
+            if history is None or history != games_dict:
+                history = games_dict
+                print(f'Refreshed in {round(time.time()-start, 3)}s. games_dict:\n{games_dict}')
+        except Exception as e:
+            print(f'Got exception: {e}')
         x = 1
     x = 1
 
