@@ -1,17 +1,3 @@
-import os
-import pickle
-import platform
-import re
-
-import requests
-import yaml
-from selenium.common import SessionNotCreatedException
-# from seleniumwire import webdriver
-from seleniumwire.undetected_chromedriver.v2 import Chrome, ChromeOptions
-from fake_useragent import UserAgent
-import chromedriver_autoinstaller
-from selenium_stealth import stealth
-import ast
 import gzip
 import json
 import re
@@ -20,55 +6,16 @@ from time import sleep
 from bs4 import BeautifulSoup
 import datetime
 
-import requests
 import yaml
 from selenium.webdriver import Keys
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 
+from util import get_driver
+
 import pickle
 import tqdm
-
-with open('credentials.yaml') as f:
-    credentials = yaml.safe_load(f)
-# API_KEY = credentials['API_KEY']
-
-options = ChromeOptions()
-ua = UserAgent()
-userAgent = ua.random
-options.add_argument("--incognito")
-options.add_argument("--disable-dev-shm-usage")
-options.add_argument(f'user-agent={userAgent}')
-# options.add_argument('--headless')
-# options.add_argument("disable-infobars")
-# options.add_argument("--disable-extensions")
-# options.add_argument("--disable-gpu")
-# options.add_argument("--disable-dev-shm-usage")
-# options.add_argument("--no-sandbox")
-
-
-
-def get_driver():
-    """Make a new Chrome driver"""
-    if platform.system() == 'Windows':
-        try:
-            driver = Chrome(executable_path=os.path.join(os.path.dirname(__file__), 'chromedriver.exe'),
-                                      options=options)
-        except SessionNotCreatedException:
-            path = chromedriver_autoinstaller.install(os.path.dirname(__file__))
-            new_path = os.path.join(os.path.dirname(path), '..', 'chromedriver.exe')
-            if os.path.exists(new_path):
-                os.remove(new_path)
-
-            os.rename(path, new_path)
-            os.rmdir(os.path.dirname(path))
-
-            driver = Chrome(executable_path=os.path.join(os.path.dirname(__file__), 'chromedriver.exe'),
-                                      options=options)
-    else:
-        driver = Chrome(options=options)
-    return driver
 
 
 def beautifulsoup_obj_to_selenium(bs_obj, driver):
@@ -183,6 +130,7 @@ def main():
 
 
 
+    ##### MY FIRST TRY IS BELOW, MOST OR ALL OF THIS SHOULD BE DELETED LATER
 
     # While loop to look for updates to the price_dict
     last_date = datetime.datetime.now()
