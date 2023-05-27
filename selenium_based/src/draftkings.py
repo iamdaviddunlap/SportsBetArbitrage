@@ -124,9 +124,9 @@ def parse_page(driver):
 
 
 class DraftKingsController:
-    def __init__(self):
+    def __init__(self, target_sport):
         self.driver = None
-        self.target_sport = 'baseball'
+        self.target_sport = target_sport
         self.games_dict = None
         self.buttons_dict = None
 
@@ -200,6 +200,6 @@ class DraftKingsController:
 
 
 if __name__ == '__main__':
-    controller = DraftKingsController()
+    controller = DraftKingsController(target_sport='baseball')
     controller.startup()
     controller.run_main_loop()
