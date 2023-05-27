@@ -1,12 +1,12 @@
 import time
 from bs4 import BeautifulSoup
+import json
 
-import yaml
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 
-from util import get_driver
+from util import get_driver, BookieSite
 
 
 def expand_accordions(driver):
@@ -129,6 +129,7 @@ class DraftKingsController:
         self.target_sport = target_sport
         self.games_dict = None
         self.buttons_dict = None
+        self.bookie_site_enum = BookieSite.DRAFTKINGS
 
     def startup(self):
         self.driver = get_driver()
@@ -157,8 +158,9 @@ class DraftKingsController:
             res = bet_button_sel.click()
             time.sleep(1)
             if res is None:  # Trying to prevent error from
-                wager_input = self.driver.find_element(By.XPATH, f"//input[contains(@class, 'betslip-wager-box__input') "
-                                                                 f"and contains(@type, 'text')]")
+                wager_input = self.driver.find_element(By.XPATH,
+                                                       f"//input[contains(@class, 'betslip-wager-box__input') "
+                                                       f"and contains(@type, 'text')]")
                 wager_input.send_keys(str(bet_amount))
                 place_bet_button = self.driver.find_element(By.CLASS_NAME, "dk-place-bet-button__wrapper")
                 if 'log in' in place_bet_button.text.lower():
@@ -175,14 +177,31 @@ class DraftKingsController:
                   f'{[x.text for x in sel_buttons]}')
             return False
 
-    def run_main_loop(self):
+    def run_main_loop(self, shared_dict, event, bet_dict):
         while True:
+            if event.is_set():
+                # If the event is set, place a bet
+                bet_details = bet_dict[self.bookie_site_enum]
+                bet_details = json.loads(bet_details)
+
+                success = False
+                try:
+                    success = self.place_bet(team_name=bet_details['team_name'],
+                                             expected_moneyline=bet_details['expected_moneyline'],
+                                             bet_amount=bet_details['bet_amount'])
+                except Exception as e:
+                    pass
+
+                if success:
+                    event.clear()
+
             start_time = time.time()
             try:
                 games_dict, buttons_dict = parse_page(self.driver)
                 if games_dict is not None:
                     self.games_dict = games_dict
                     self.buttons_dict = buttons_dict
+                    shared_dict[self.bookie_site_enum] = json.dumps(games_dict)
                     print(f'parsed page in {round(time.time() - start_time, 3)}s. games_dict: \n{games_dict}')
 
                     # TODO the following block of code tests placing a bet of $10 on the first valid bet on the page

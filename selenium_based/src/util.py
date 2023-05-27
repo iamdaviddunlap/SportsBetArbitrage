@@ -1,10 +1,16 @@
 import os
 import platform
+from enum import Enum
 
 from selenium.common import SessionNotCreatedException
 from seleniumwire.undetected_chromedriver.v2 import Chrome, ChromeOptions
 from fake_useragent import UserAgent
 import chromedriver_autoinstaller
+
+
+class BookieSite(Enum):
+    FANDUEL = 1
+    DRAFTKINGS = 2
 
 
 def get_driver():

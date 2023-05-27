@@ -1,12 +1,12 @@
 import time
 from bs4 import BeautifulSoup
+import json
 
-import yaml
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 
-from util import get_driver
+from util import get_driver, BookieSite
 
 
 def beautifulsoup_obj_to_selenium(bs_obj, driver):
@@ -91,6 +91,7 @@ class FanduelController:
         self.target_sport = target_sport
         self.games_dict = None
         self.buttons_dict = None
+        self.bookie_site_enum = BookieSite.FANDUEL
 
     def startup(self):
         self.driver = get_driver()
@@ -162,8 +163,24 @@ class FanduelController:
         # return True
         return False
 
-    def run_main_loop(self):
+    def run_main_loop(self, shared_dict, event, bet_dict):
         while True:
+            if event.is_set():
+                # If the event is set, place a bet
+                bet_details = bet_dict[self.bookie_site_enum]
+                bet_details = json.loads(bet_details)
+
+                success = False
+                try:
+                    success = self.place_bet(team_name=bet_details['team_name'],
+                                             expected_moneyline=bet_details['expected_moneyline'],
+                                             bet_amount=bet_details['bet_amount'])
+                except Exception as e:
+                    pass
+
+                if success:
+                    event.clear()
+
             start_time = time.time()
             try:
                 games_dict, buttons_dict = parse_page(self.driver)
@@ -171,6 +188,7 @@ class FanduelController:
                 if games_dict is not None:
                     self.games_dict = games_dict
                     self.buttons_dict = buttons_dict
+                    shared_dict[self.bookie_site_enum] = json.dumps(games_dict)
                     print(f'parsed page in {round(time.time() - start_time, 3)}s. games_dict: \n{games_dict}')
 
                     # TODO the following block of code tests placing a bet of $10 on the first valid bet on the page

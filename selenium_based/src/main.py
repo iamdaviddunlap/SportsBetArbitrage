@@ -2,30 +2,22 @@ import time
 import json
 from multiprocessing import Process, Manager
 from selenium import webdriver
-from enum import Enum
+
+from arbitrage import find_arbitrage
+from util import BookieSite
+from fanduel import FanduelController
+from draftkings import DraftKingsController
+
+CONTROLLER_OBJ_MAP = {
+    BookieSite.FANDUEL: FanduelController,
+    BookieSite.DRAFTKINGS: DraftKingsController,
+}
 
 
-class BookieSite(Enum):
-    FANDUEL = 1
-    # BOVADA = 2
-
-
-def thread_provisioner(bookie_site, shared_dict, key, event, bet_dict):
+def thread_provisioner(bookie_site, shared_dict, key, event, bet_dict, controller):
     print(f'Thread {key} starting monitoring of {bookie_site}')
-    if bookie_site == BookieSite.FANDUEL:
-        pass
-        # TODO trigger monitor_website function for fanduel
-    # TODO add other bookie sites
-
-    # Some basic testing code. Remove later.
-    time.sleep(1)
-    shared_dict[bookie_site] = json.dumps({'a': key})
-    time.sleep(2)
-    shared_dict[bookie_site] = json.dumps({'a': str(key)+'!'})
-    while True:
-        if event.is_set():
-            print(f'Event was set for {bookie_site}!')
-            event.clear()
+    controller.startup()
+    controller.run_main_loop(shared_dict, event, bet_dict)
 
 
 def monitor_website(bookie_site, website_url, shared_dict, event, bet_dict):
@@ -67,7 +59,7 @@ def monitor_website(bookie_site, website_url, shared_dict, event, bet_dict):
         time.sleep(1)  # You can adjust the sleep time as needed
 
 
-def analyze_data(shared_dict, events_dict, bet_dicts):
+def analyze_data(shared_dict, events_dict, bet_dicts, controller_dict):
 
     cur_serialized_mental_model = dict()
 
@@ -96,7 +88,14 @@ def analyze_data(shared_dict, events_dict, bet_dicts):
 
             print(mental_model)
 
-            events_dict[BookieSite.FANDUEL].set()  # just for testing, remove later
+            # all_arb_bets = find_arbitrage(mental_model)  TODO put this back
+            all_arb_bets = [((BookieSite.DRAFTKINGS, 'kia tigers', '-111'), (BookieSite.FANDUEL, 'lg twins', '+125'))]  # TODO remove
+
+            if len(all_arb_bets) > 0:
+                # TODO trigger threads to place these bets. I need to make sure it can handle when len(all_arb_bets) > 1 and I need to place multiple bets on the same site
+                x = 1
+
+            # events_dict[BookieSite.FANDUEL].set()  # just for testing, remove later
             x = 1
 
             # ChatGPT generated from here on:
@@ -128,6 +127,8 @@ def analyze_data(shared_dict, events_dict, bet_dicts):
 
 
 def main():
+    target_sport = 'baseball'
+
     bookie_sites = list(BookieSite.__members__.values())
 
     with Manager() as manager:
@@ -137,15 +138,19 @@ def main():
         # Create shared dictionaries for bet details
         bet_dict = manager.dict()
 
+        # Create controller objects
+        controller_objs = [CONTROLLER_OBJ_MAP[site](target_sport=target_sport) for site in bookie_sites]
+        controller_dict = {k: v for k, v in zip(bookie_sites, controller_objs)}
+
         # Create events
         events_lst = [manager.Event() for _ in bookie_sites]
         events_dict = {k: v for k, v in zip(bookie_sites, events_lst)}
 
         # Create processes for provisioning threads
-        processes = [Process(target=thread_provisioner, args=(site, shared_dict, i, event, bet_dict)) for i, (site, event) in enumerate(zip(bookie_sites, events_lst))]
+        processes = [Process(target=thread_provisioner, args=(site, shared_dict, i, event, bet_dict, controller)) for i, (site, event, controller) in enumerate(zip(bookie_sites, events_lst, controller_objs))]
 
         # Create process for analyzing data
-        processes.append(Process(target=analyze_data, args=(shared_dict, events_dict, bet_dict)))
+        processes.append(Process(target=analyze_data, args=(shared_dict, events_dict, bet_dict, controller_dict)))
 
         # Start all processes
         for p in processes:
