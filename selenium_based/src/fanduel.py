@@ -1,33 +1,25 @@
-import gzip
-import json
-import re
 import time
-from time import sleep
 from bs4 import BeautifulSoup
-import datetime
 
 import yaml
-from selenium.webdriver import Keys
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 
 from util import get_driver
 
-import pickle
-import tqdm
-
 
 def beautifulsoup_obj_to_selenium(bs_obj, driver):
-    css_selector = '.'+'.'.join(bs_obj.attrs['class'])
+    css_selector = '.' + '.'.join(bs_obj.attrs['class'])
     sel_objs = driver.find_elements(By.CSS_SELECTOR, css_selector)
     if len(sel_objs) > 1:
         for obj in sel_objs:
-            bs_obj_name = bs_obj.attrs['aria-label'].replace('  ',  ' ').strip().lower()
-            sel_obj_name = obj.accessible_name.replace('  ',  ' ').strip().lower()
+            bs_obj_name = bs_obj.attrs['aria-label'].replace('  ', ' ').strip().lower()
+            sel_obj_name = obj.accessible_name.replace('  ', ' ').strip().lower()
             if bs_obj_name == sel_obj_name:
                 return obj
-        raise Exception('Error finding selenium obj from BS obj: multiple objs found from class, could not disambiguate with accessible_name')
+        raise Exception(
+            'Error finding selenium obj from BS obj: multiple objs found from class, could not disambiguate with accessible_name')
     else:
         return sel_objs[0]
 
@@ -56,11 +48,12 @@ def parse_page(driver):
     cur_sport = None
     list_parents = [x.find_parent('li') for x in all_relevant_buttons]
     games_dict = dict()
+    buttons_dict = dict()
     for li_item in parent_ul.children:
         if set(li_item.next.attrs['class']) == sport_name_class_set:
             # This li_item is the name of a new sport
             cur_sport = str(list(li_item.descendants)[-1])
-            cur_sport = ' '.join([x for x in cur_sport.split(' ') if x.lower() != 'live'])
+            cur_sport = ' '.join([x for x in cur_sport.split(' ') if x.lower() != 'live']).lower()
             if cur_sport not in games_dict:  # Check if the sport is already a key in games_dict
                 games_dict[cur_sport] = []  # If not, create an empty list for it
         else:
@@ -69,165 +62,130 @@ def parse_page(driver):
                 accessible_spans = li_item.find_all('span', attrs={"aria-label": True, "aria-hidden": False})
 
                 cur_relevant_buttons = [x for x in accessible_divs if is_relevant_button_alttxt(x)]
-                cur_relevant_labels = [x for x in accessible_spans if any(x.attrs['aria-label'] in s for s in [x.attrs['aria-label'] for x in cur_relevant_buttons])]
+                cur_relevant_labels = [x for x in accessible_spans if any(
+                    x.attrs['aria-label'] in s for s in [x.attrs['aria-label'] for x in cur_relevant_buttons])]
 
                 if len(cur_relevant_buttons) != len(cur_relevant_labels):
                     raise Exception(f'Mismatch when parsing. Got a different number of button and label elements. '
                                     f'Buttons: \n{cur_relevant_buttons}\nLabels: \n{cur_relevant_labels}')
 
                 odds_list = []
-                for x in cur_relevant_buttons:
-                    odds = None if 'aria-disabled' in x.attrs else str(list(x.descendants)[-1])
-                    if odds is not None and len(odds) > 6:
-                        odds = str(list(x.next.descendants)[-1])
-                    odds_list.append(odds)
-
                 cur_game_dict = dict()
                 for i in range(len(cur_relevant_buttons)):
-                    cur_game_dict[cur_relevant_labels[i].attrs['aria-label']] = odds_list[i]
+                    button = cur_relevant_buttons[i]
+                    odds = None if 'aria-disabled' in button.attrs else str(list(button.descendants)[-1])
+                    if odds is not None and len(odds) > 6:
+                        odds = str(list(button.next.descendants)[-1])
+                    odds_list.append(odds)
+
+                    team_name = cur_relevant_labels[i].attrs['aria-label']
+                    cur_game_dict[team_name] = odds_list[i]
+                    buttons_dict[team_name] = button
                 games_dict[cur_sport].append(cur_game_dict)
-    return games_dict
+    return games_dict, buttons_dict
 
 
-def main():
-    driver = get_driver()
+class FanduelController:
+    def __init__(self, target_sport):
+        self.driver = None
+        self.target_sport = target_sport
+        self.games_dict = None
+        self.buttons_dict = None
 
-    with open('credentials.yaml') as f:
-        credentials = yaml.safe_load(f)
-    username = credentials['username']
-    password = credentials['password']
+    def startup(self):
+        self.driver = get_driver()
 
-    driver.get('https://co.sportsbook.fanduel.com/live?tab=watch-live')
+        self.driver.get('https://co.sportsbook.fanduel.com/live')
 
-    # Click over to the "Watch Live" tab to see all live games for all sports
-    html = driver.page_source
-    soup = BeautifulSoup(html, 'html.parser')
-    buttons = soup.findAll('div', {'role': 'button'})
-    # watch_live_button = [x for x in buttons  if 'aria-label' in x.attrs.keys() and 'Watch Live' in x.attrs['aria-label']][0]  TODO put back
-    watch_live_button = [x for x in buttons  if 'aria-label' in x.attrs.keys() and 'Baseball' in x.attrs['aria-label']][0]
-    watch_live_button = beautifulsoup_obj_to_selenium(watch_live_button, driver)
-    watch_live_button.click()
+        # Click over to the tab for the target sport
+        html = self.driver.page_source
+        soup = BeautifulSoup(html, 'html.parser')
+        buttons = soup.findAll('div', {'role': 'button'})
+        sport_button = [x for x in buttons if 'aria-label' in x.attrs.keys() and self.target_sport.lower()
+                        in x.attrs['aria-label'].lower()][0]
+        sport_button = beautifulsoup_obj_to_selenium(sport_button, self.driver)
+        sport_button.click()
 
-    # Wait until the loading dots are no longer present in the DOM.
-    # This checks every 500ms for the disappearance of the elements.
-    WebDriverWait(driver, 10).until_not(
-        EC.presence_of_all_elements_located(
-            (By.XPATH, "//span[contains(@style, 'background-color: rgb(0, 95, 200);')]"))
-    )
+        # Wait until the loading dots are no longer present in the DOM
+        WebDriverWait(self.driver, 10).until_not(
+            EC.presence_of_all_elements_located(
+                (By.XPATH, "//span[contains(@style, 'background-color: rgb(0, 95, 200);')]"))
+        )
 
-    history = None
-    while True:
-        start = time.time()
-        try:
-            games_dict = parse_page(driver)
-            if history is None or history != games_dict:
-                history = games_dict
-                print(f'Refreshed in {round(time.time()-start, 3)}s. games_dict:\n{games_dict}')
-        except Exception as e:
-            print(f'Got exception: {e}')
-        x = 1
-    x = 1
+        print(f'Completed startup.')
 
+    def place_bet(self, team_name, expected_moneyline, bet_amount):
+        bet_button_bs = self.buttons_dict[team_name]
 
+        css_selector = '.' + '.'.join(bet_button_bs.attrs['class'])
+        sel_objs = self.driver.find_elements(By.CSS_SELECTOR, css_selector)
 
-    ##### MY FIRST TRY IS BELOW, MOST OR ALL OF THIS SHOULD BE DELETED LATER
+        bet_button_sel = None
+        for obj in sel_objs:
+            try:
+                if team_name in str(obj.accessible_name):
+                    bet_button_sel = obj
+                    break
+            except:
+                pass
+        if bet_button_sel is None:
+            print(f'NOT PLACING BET because cannot find matching bet button for {team_name}')
+            return False
 
-    # While loop to look for updates to the price_dict
-    last_date = datetime.datetime.now()
-    while True:
-        last_req = [x for x in driver.requests if 'getMarketPrices' in x.url][-1]
-        if last_req.response is not None and last_req.date > last_date:
-            last_date = last_req.date
-            price_json = json.loads(gzip.decompress(last_req.response.body).decode('utf-8'))
-            price_dict_new = {x['marketId']: [None if y['runnerStatus'] != 'ACTIVE' else y['winRunnerOdds']['americanDisplayOdds']['americanOddsInt']
-                                              for y in x['runnerDetails']] for x in price_json}
-            print(price_dict_new)
-            driver.requests.clear()
-            break  # TODO don't actually break here. Move this while loop to a thread and continuously update the dict
+        actual_odds = bet_button_sel.text
+        if expected_moneyline != actual_odds:
+            print(f'NOT PLACING BET because mismatch of odds: expected {expected_moneyline} but is now {actual_odds}')
+            return False
+        bet_button_sel.click()
+        time.sleep(1)
 
-    # TODO use different code to determine what's a "relevant button"
-    relevant_button = buttons_dict[list(buttons_dict.keys())[0]][1]
+        html = self.driver.page_source
+        soup = BeautifulSoup(html, 'html.parser')
+        wager_input_tag = [x for x in soup.findAll('input', {'type': 'text'})
+                           if x.parent.parent.next.next == 'WAGER'][0]
+        css_selector = '.' + '.'.join(wager_input_tag.attrs['class'])
+        sel_objs = self.driver.find_elements(By.CSS_SELECTOR, css_selector)
+        input_obj_selenium = [x for x in sel_objs if 'wager' in x.accessible_name.lower()][0]
+        input_obj_selenium.send_keys(str(bet_amount))
 
-    # Click the relevant button
-    button_selenium = beautifulsoup_obj_to_selenium(relevant_button, driver)
-    button_selenium.click()
+        bottom_section_div = [x for x in wager_input_tag.find_parent('ul').parent.parent.children][-1]
+        submit_button_bs = bottom_section_div.find_all('div', {'role': 'button'})[-1]
 
-    # Enter the be amount into the input
-    bet_amount = 10  # TODO set this elsewhere
-    html = driver.page_source
-    soup = BeautifulSoup(html, 'html.parser')
-    wager_input_tag = [x for x in soup.findAll('input', {'type': 'text'}) if x.parent.parent.next.next == 'WAGER'][0]
-    input_obj_selenium = beautifulsoup_obj_to_selenium(wager_input_tag, driver)
-    input_obj_selenium.send_keys(str(bet_amount))
+        css_selector = '.' + '.'.join(submit_button_bs.attrs['class'])
+        sel_objs = self.driver.find_elements(By.CSS_SELECTOR, css_selector)
+        submit_button_sel = sel_objs[0]
 
-    x = 1
+        if 'log in' in submit_button_sel.accessible_name.lower():
+            print(f'NOT PLACING BET because not logged in.')
+            return False
+        # TODO implement clicking the bet button and anything that happens after that
+        # return True
+        return False
 
-    return
-    ###### IAN CODE FOR YOUTUBE LOGIN #####
+    def run_main_loop(self):
+        while True:
+            start_time = time.time()
+            try:
+                games_dict, buttons_dict = parse_page(self.driver)
 
-    driver.get('https://accounts.google.com/servicelogin')
-    search_form = driver.find_element(By.ID, 'identifierId')
-    sleep(1)
-    search_form.send_keys(username)
-    next_button = driver.find_element(By.XPATH, '//*[@id ="identifierNext"]')
-    next_button.click()
-    WebDriverWait(driver, 45).until(
-        EC.presence_of_element_located((By.NAME, "Passwd")),
-    )
-    search_form = driver.find_element(By.NAME, 'Passwd')
-    sleep(1)
-    search_form.send_keys(password)
-    search_form.send_keys(Keys.RETURN)
-    WebDriverWait(driver, 45).until(
-        EC.url_matches('https\:\/\/myaccount\.google\.com\/\?utm_source\=sign_in_no_continue'),
-    )
+                if games_dict is not None:
+                    self.games_dict = games_dict
+                    self.buttons_dict = buttons_dict
+                    print(f'parsed page in {round(time.time() - start_time, 3)}s. games_dict: \n{games_dict}')
 
-    # url = 'https://myactivity.google.com/product/youtube?hl=en&utm_medium=web&utm_source=youtube&pli=1&max=1451615325000000'
-    # url = 'https://myactivity.google.com/product/youtube?hl=en&utm_medium=web&utm_source=youtube&pli=1&max=1514789750000000'
-    url = 'https://myactivity.google.com/product/youtube?hl=en&utm_medium=web&utm_source=youtube&pli=1'
+                    # TODO the following block of code tests placing a bet of $10 on the first valid bet on the page
+                    # amount = 10
+                    # valid_team_key = list(games_dict[self.target_sport][[None not in g.values() for g in games_dict[self.target_sport]].index(True)].keys())[0]
+                    # team_key_idx = [i for i, x in enumerate(games_dict[self.target_sport]) if valid_team_key in x][0]
+                    # expected_moneyline = games_dict[self.target_sport][team_key_idx][valid_team_key]
+                    # did_place_bet = self.place_bet(valid_team_key, expected_moneyline, amount)
 
-    driver.get(url)
-    num_batches = len(driver.requests)
-
-    i = 0
-    while True:
-        driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-        sleep(0.5)
-
-        if i % 200 == 0:
-            new_num_batches = len(driver.requests)
-            if not new_num_batches > num_batches:
-                break
-            else:
-                num_batches = new_num_batches
-
-        i += 1
-
-    total_history = list()
-    for request in tqdm([request for request in driver.requests if
-             ('myactivity' in request.url and 'batchexecute' in request.url)]):
-        try:
-            s = gzip.decompress(request.response.body).decode('utf-8')
-            idxs = [a.start() for a in re.finditer('\n', s)]
-            s = s[idxs[2]+1:idxs[3]]
-            history = json.loads(json.loads(s)[0][2])[0]
-            history = [h for h in history if (len(h[9]) == 4 and h[9][2] == 'Watched')]
-            total_history.extend(history)
-        except Exception:
-            pass
-
-    # total_history = sorted(total_history, key=lambda x: x[4])[::2]
-    with open('data/total_history_4', 'wb') as fp:
-        pickle.dump(total_history, fp)
-    x=1
-
-    # wait = WebDriverWait(driver, 10)
-    #
-    # try:
-    #     # need the inner request that contains coordinates and timestamp
-    #     wait.until(lambda d: len(d.current_url.split('/')[4]) > 1)
-    # )
+            except Exception as e:
+                print(f'!!! Got exception after {round(time.time() - start_time, 3)}s: {e}')
+            x = 1
 
 
 if __name__ == '__main__':
-    main()
+    controller = FanduelController(target_sport='baseball')
+    controller.startup()
+    controller.run_main_loop()

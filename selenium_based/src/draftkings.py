@@ -186,13 +186,13 @@ class DraftKingsController:
                     print(f'parsed page in {round(time.time() - start_time, 3)}s. games_dict: \n{games_dict}')
 
                     # TODO the following block of code tests placing a bet of $10 on the first valid bet on the page
-                    amount = 10
-                    valid_league_key = list(games_dict[self.target_sport].keys())[
-                        [[None not in g.values() for g in games_lst].index(True)
-                         for league, games_lst in games_dict[self.target_sport].items()][0]]
-                    valid_team_key = list(games_dict[self.target_sport][valid_league_key][0].keys())[0]
-                    expected_moneyline = games_dict[self.target_sport][valid_league_key][0][valid_team_key]
-                    did_place_bet = self.place_bet(valid_team_key, expected_moneyline, amount)
+                    # amount = 10
+                    # valid_league_key = list(games_dict[self.target_sport].keys())[
+                    #     [[None not in g.values() for g in games_lst].index(True)
+                    #      for league, games_lst in games_dict[self.target_sport].items()][0]]
+                    # valid_team_key = list(games_dict[self.target_sport][valid_league_key][0].keys())[0]
+                    # expected_moneyline = games_dict[self.target_sport][valid_league_key][0][valid_team_key]
+                    # did_place_bet = self.place_bet(valid_team_key, expected_moneyline, amount)
 
             except Exception as e:
                 print(f'!!! Got exception after {round(time.time() - start_time, 3)}s: {e}')
