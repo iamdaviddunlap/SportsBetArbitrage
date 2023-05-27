@@ -13,6 +13,10 @@ class BookieSite(Enum):
     DRAFTKINGS = 2
 
 
+def clean_str(str):
+    return str.lower().replace('.', '').replace('  ', ' ').replace('\u2212', '-').strip()
+
+
 def get_driver():
     """Make a new Chrome driver"""
 

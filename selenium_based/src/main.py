@@ -59,6 +59,10 @@ def monitor_website(bookie_site, website_url, shared_dict, event, bet_dict):
         time.sleep(1)  # You can adjust the sleep time as needed
 
 
+def json_dump_games_dict(games_dict):
+    return json.dumps({str(k): v for k, v in games_dict.items()})
+
+
 def analyze_data(shared_dict, events_dict, bet_dicts, controller_dict):
 
     cur_serialized_mental_model = dict()
@@ -88,8 +92,8 @@ def analyze_data(shared_dict, events_dict, bet_dicts, controller_dict):
 
             print(mental_model)
 
-            # all_arb_bets = find_arbitrage(mental_model)  TODO put this back
-            all_arb_bets = [((BookieSite.DRAFTKINGS, 'kia tigers', '-111'), (BookieSite.FANDUEL, 'lg twins', '+125'))]  # TODO remove
+            all_arb_bets = find_arbitrage(mental_model)  # TODO this is the real one
+            # all_arb_bets = [((BookieSite.DRAFTKINGS, 'kia tigers', '-111'), (BookieSite.FANDUEL, 'lg twins', '+125'))]  # TODO this is a test one to guarantee an arb
 
             if len(all_arb_bets) > 0:
                 # TODO trigger threads to place these bets. I need to make sure it can handle when len(all_arb_bets) > 1 and I need to place multiple bets on the same site

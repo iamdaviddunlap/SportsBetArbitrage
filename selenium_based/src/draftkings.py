@@ -6,7 +6,7 @@ from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 
-from util import get_driver, BookieSite
+from util import get_driver, clean_str, BookieSite
 
 
 def expand_accordions(driver):
@@ -35,11 +35,11 @@ def set_sport(driver, target_sport):
     html = driver.page_source
     soup = BeautifulSoup(html, 'html.parser')
     cur_sport_a_tag = soup.find('a', {'class': 'sportsbook-tabbed-subheader__tab-link', 'aria-selected': 'true'})
-    cur_sport = [x for x in cur_sport_a_tag.descendants][-1].lower()
+    cur_sport = clean_str([x for x in cur_sport_a_tag.descendants][-1])
     if cur_sport != target_sport:
         target_sport_a_tag = next((element for element in
                                    driver.find_elements(By.XPATH,
-                                                        "//a[contains(translate(@id, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'basketball') "
+                                                        f"//a[contains(translate(@id, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), '{target_sport}') "
                                                         "and contains(@class, 'sportsbook-tabbed-subheader__tab-link')]"
                                                         )), None)
         print(f'You are not on the page for the target sport, clicking link for {target_sport} page...')
@@ -79,7 +79,7 @@ def parse_page(driver):
         league_name = league_names[i]
         table_body = table_bodies[i]
 
-        thead_labels = [str([x for x in th.descendants][-1]).lower() for th in table_head.find_all('th')]
+        thead_labels = [clean_str(str([x for x in th.descendants][-1])) for th in table_head.find_all('th')]
 
         if 'moneyline' not in thead_labels:
             print(f"!! 'moneyline' not found in table_head labels, stopping parsing of {league_name} league")
@@ -88,7 +88,7 @@ def parse_page(driver):
         moneyline_idx = thead_labels.index('moneyline') - 1
 
         cur_sport_a_tag = soup.find('a', {'class': 'sportsbook-tabbed-subheader__tab-link', 'aria-selected': 'true'})
-        cur_sport = [x for x in cur_sport_a_tag.descendants][-1].lower()
+        cur_sport = clean_str([x for x in cur_sport_a_tag.descendants][-1])
         if cur_sport not in games_dict:  # Check if the sport is already a key in games_dict
             games_dict[cur_sport] = dict()  # If not, create an empty dict for it
         if league_name not in games_dict[cur_sport].keys():
@@ -112,7 +112,7 @@ def parse_page(driver):
                 if team_name not in buttons_dict.keys():
                     buttons_dict[team_name] = moneyline_button
 
-                moneyline_odds = str(list(moneyline_div.find('span').descendants)[-1])
+                moneyline_odds = clean_str(str(list(moneyline_div.find('span').descendants)[-1]))
                 cur_matchup[team_name] = moneyline_odds
             else:
                 cur_matchup[team_name] = None
@@ -151,7 +151,7 @@ class DraftKingsController:
 
         sel_buttons = [x for x in self.driver.find_elements(By.XPATH,
                                                             f"//div[contains(@class, 'sportsbook-outcome-cell__body') "
-                                                            f"and contains(translate(@aria-label, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), '{bet_button_bs.attrs['aria-label'].lower().strip()}') ]")]
+                                                            f"and contains(translate(@aria-label, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), '{clean_str(bet_button_bs.attrs['aria-label']).strip()}') ]")]
         try:
             matching_button_idx = [x.text for x in sel_buttons].index(expected_moneyline)
             bet_button_sel = sel_buttons[matching_button_idx]
@@ -163,7 +163,7 @@ class DraftKingsController:
                                                        f"and contains(@type, 'text')]")
                 wager_input.send_keys(str(bet_amount))
                 place_bet_button = self.driver.find_element(By.CLASS_NAME, "dk-place-bet-button__wrapper")
-                if 'log in' in place_bet_button.text.lower():
+                if 'log in' in clean_str(place_bet_button.text):
                     print(f'NOT PLACING BET because not logged in.')
                     return False
                 # TODO implement clicking the bet button and anything that happens after that
