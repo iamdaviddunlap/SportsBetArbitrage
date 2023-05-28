@@ -6,7 +6,7 @@ from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 
-from util import get_driver, clean_str, BookieSite
+from util import get_driver, clean_str, BookieSite, get_logger
 
 
 def expand_accordions(driver):
@@ -31,7 +31,7 @@ def expand_accordions(driver):
     return False
 
 
-def set_sport(driver, target_sport):
+def set_sport(driver, target_sport, logger):
     html = driver.page_source
     soup = BeautifulSoup(html, 'html.parser')
     cur_sport_a_tag = soup.find('a', {'class': 'sportsbook-tabbed-subheader__tab-link', 'aria-selected': 'true'})
@@ -42,13 +42,13 @@ def set_sport(driver, target_sport):
                                                         f"//a[contains(translate(@id, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), '{target_sport}') "
                                                         "and contains(@class, 'sportsbook-tabbed-subheader__tab-link')]"
                                                         )), None)
-        print(f'You are not on the page for the target sport, clicking link for {target_sport} page...')
+        logger.debug(f'You are not on the page for the target sport, clicking link for {target_sport} page...')
         target_sport_a_tag.click()
         return True
     return False
 
 
-def parse_page(driver):
+def parse_page(driver, logger):
     accordion_divs = []
     table_bodies = []
     num_loops = 0
@@ -82,7 +82,7 @@ def parse_page(driver):
         thead_labels = [clean_str(str([x for x in th.descendants][-1])) for th in table_head.find_all('th')]
 
         if 'moneyline' not in thead_labels:
-            print(f"!! 'moneyline' not found in table_head labels, stopping parsing of {league_name} league")
+            logger.error(f"!! 'moneyline' not found in table_head labels, stopping parsing of {league_name} league")
             continue
 
         moneyline_idx = thead_labels.index('moneyline') - 1
@@ -126,25 +126,28 @@ def parse_page(driver):
 class DraftKingsController:
     def __init__(self, target_sport):
         self.driver = None
+        self.logger = None
         self.target_sport = target_sport
         self.games_dict = None
         self.buttons_dict = None
         self.bookie_site_enum = BookieSite.DRAFTKINGS
 
-    def startup(self):
+    def startup(self, queue, key):
+        self.logger = get_logger(queue, key)
+
         self.driver = get_driver()
 
         self.driver.get('https://sportsbook.draftkings.com/live?category=live-in-game')
 
         # Set the sport to the target_sport if needed
-        did_set_sport = set_sport(self.driver, self.target_sport)
-        if did_set_sport: print('Successfully set the sport.')
+        did_set_sport = set_sport(self.driver, self.target_sport, self.logger)
+        if did_set_sport: self.logger.debug('Successfully set the sport.')
 
         # Expand any accordions if needed
         did_expand_accordions = expand_accordions(self.driver)
-        if did_expand_accordions: print('Successfully expanded the accordions.')
+        if did_expand_accordions: self.logger.debug('Successfully expanded the accordions.')
 
-        print(f'Completed startup.')
+        self.logger.info(f'Completed startup.')
 
     def place_bet(self, team_name, expected_moneyline, bet_amount):
         bet_button_bs = self.buttons_dict[team_name]
@@ -164,16 +167,16 @@ class DraftKingsController:
                 wager_input.send_keys(str(bet_amount))
                 place_bet_button = self.driver.find_element(By.CLASS_NAME, "dk-place-bet-button__wrapper")
                 if 'log in' in clean_str(place_bet_button.text):
-                    print(f'NOT PLACING BET because not logged in.')
+                    self.logger.error(f'NOT PLACING BET because not logged in.')
                     return False
                 # TODO implement clicking the bet button and anything that happens after that
                 x = 1
                 return True
             else:
-                print(f'Got unexpected result from clicking the bet_button: {res}')
+                self.logger.error(f'Got unexpected result from clicking the bet_button: {res}')
                 return False
         except ValueError as e:
-            print(f'NOT PLACING BET because expected_moneyline ({expected_moneyline}) not found in button text: '
+            self.logger.error(f'NOT PLACING BET because expected_moneyline ({expected_moneyline}) not found in button text: '
                   f'{[x.text for x in sel_buttons]}')
             return False
 
@@ -197,12 +200,12 @@ class DraftKingsController:
 
             start_time = time.time()
             try:
-                games_dict, buttons_dict = parse_page(self.driver)
+                games_dict, buttons_dict = parse_page(self.driver, self.logger)
                 if games_dict is not None:
                     self.games_dict = games_dict
                     self.buttons_dict = buttons_dict
                     shared_dict[self.bookie_site_enum] = json.dumps(games_dict)
-                    print(f'parsed page in {round(time.time() - start_time, 3)}s. games_dict: \n{games_dict}')
+                    self.logger.debug(f'parsed page in {round(time.time() - start_time, 3)}s. games_dict: \n{games_dict}')
 
                     # TODO the following block of code tests placing a bet of $10 on the first valid bet on the page
                     # amount = 10
@@ -214,7 +217,7 @@ class DraftKingsController:
                     # did_place_bet = self.place_bet(valid_team_key, expected_moneyline, amount)
 
             except Exception as e:
-                print(f'!!! Got exception after {round(time.time() - start_time, 3)}s: {e}')
+                self.logger.error(f'!!! Got exception after {round(time.time() - start_time, 3)}s: {e}')
             x = 1
 
 

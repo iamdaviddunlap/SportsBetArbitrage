@@ -55,7 +55,21 @@ def get_unique_games(game_sets, team_mapping):
     return list(unique_games)
 
 
-def find_arbitrage(games_dict):
+def calculate_stakes_and_payouts(investment, odds0, odds1, odds_sum, us_odds0, us_odds1):
+    stake0 = round(((investment * odds0) / odds_sum) * 2) / 2
+    stake1 = investment - stake0
+
+    eu_odds_0 = us_to_eu(us_odds0)
+    eu_odds_1 = us_to_eu(us_odds1)
+
+    payout_0 = round(eu_odds_0 * stake0, 2)
+    payout_1 = round(eu_odds_1 * stake1, 2)
+    profit_0 = round(payout_0 - investment, 2)
+    profit_1 = round(payout_1 - investment, 2)
+    return stake0, stake1, payout_0, payout_1, profit_0, profit_1
+
+
+def find_arbitrage(games_dict, investment=75):
     """
     Given a games_dict that contains info about many bookie sites, this function will search for any arbitrages.
     :param games_dict: A dict whose keys are BookieSites and values are created by each of the various controllers
@@ -120,7 +134,7 @@ def find_arbitrage(games_dict):
             if len(all_odds_for_game_filtered) >= 2:
                 teams = list(game_set)
                 odds_for_teams_us = {}
-                odds_for_teams_eu = {}
+                odds_for_teams_percent = {}
 
                 for team in teams:
                     odds_for_teams_us[team] = []
@@ -128,22 +142,56 @@ def find_arbitrage(games_dict):
                         for bookie_team_name, bookie_games_list in team_dict.items():
                             if clean_str(team) == short_to_long(clean_str(bookie_team_name), team_mapping):
                                 odds_for_teams_us[team].append((bookie_site, bookie_games_list))
-                    odds_for_teams_eu[team] = [(bookie, eu_to_percent(us_to_eu(odds))) for bookie, odds in
+                    odds_for_teams_percent[team] = [(bookie, eu_to_percent(us_to_eu(odds))) for bookie, odds in
                                                odds_for_teams_us[team]]
 
-                for bookie0, odds0 in odds_for_teams_eu[teams[0]]:
-                    for bookie1, odds1 in odds_for_teams_eu[teams[1]]:
+                for bookie0, odds0 in odds_for_teams_percent[teams[0]]:
+                    for bookie1, odds1 in odds_for_teams_percent[teams[1]]:
                         odds_sum = (odds0 + odds1)
 
                         if odds_sum < 99:
                             us_odds_0 = [x[1] for x in odds_for_teams_us[teams[0]] if x[0] == bookie0][0]
                             us_odds_1 = [x[1] for x in odds_for_teams_us[teams[1]] if x[0] == bookie1][0]
-                            print(f'Should bet on "{teams[0]}" with {bookie0} (us: {us_odds_0}, eu: {odds0}), '
-                                  f'and on "{teams[1]}" with {bookie1} (us: {us_odds_1}, eu: {odds1}) '
-                                  f'for total odds of {odds_sum}')
 
-                            bet0 = (bookie0, teams[0], us_odds_0)
-                            bet1 = (bookie1, teams[1], us_odds_1)
+                            stake0, stake1, payout_0, payout_1, profit_0, profit_1 = \
+                                calculate_stakes_and_payouts(investment, odds0, odds1, odds_sum, us_odds_0, us_odds_1)
+
+                            addition = 0
+                            if profit_0 < 0 or profit_1 < 0:
+                                new_profit_0 = new_profit_1 = -1
+                                while new_profit_0 <= 0 or new_profit_1 <= 0:
+                                    addition += 1
+                                    new_investment = investment + addition
+                                    new_stake0, new_stake1, new_payout_0, new_payout_1, new_profit_0, new_profit_1 = \
+                                        calculate_stakes_and_payouts(new_investment, odds0, odds1, odds_sum, us_odds_0,
+                                                                     us_odds_1)
+                                percent_increase = (addition / investment) * 100
+                                if percent_increase < 20:
+                                    print(f'Investment must be at least ${investment+addition} to guarantee profit. '
+                                          f'This is only a {percent_increase}% increase from the initial investment of '
+                                          f'${investment}, so bumping up and continuing.')
+                                    investment = new_investment
+                                    stake0 = new_stake0
+                                    stake1 = new_stake1
+                                    payout_0 = new_payout_0
+                                    payout_1 = new_payout_1
+                                    profit_0 = new_profit_0
+                                    profit_1 = new_profit_1
+                                else:
+                                    print(f'Investment must be at least ${investment + addition} to guarantee profit. '
+                                          f'This is a {percent_increase}% increase from the initial investment of '
+                                          f'${investment} which I\'ve deemed too high, so stopping here.')
+                                    continue
+
+
+                            print(f'--------------------------------------\n'
+                                  f'Should bet on "{teams[0]}" with {bookie0} (us: {us_odds_0}, eu: {odds0}), '
+                                  f'and on "{teams[1]}" with {bookie1} (us: {us_odds_1}, eu: {odds1}) '
+                                  f'for total odds of {odds_sum}.\n'
+                                  f'With ${investment} investment, stand to profit ${profit_0:.2f} if {teams[0]} wins, or ${profit_1:.2f} if {teams[1]} wins.')
+
+                            bet0 = (bookie0, teams[0], us_odds_0, stake0, payout_0)
+                            bet1 = (bookie1, teams[1], us_odds_1, stake1, payout_1)
                             all_arb_bets.append((bet0, bet1))
 
     return all_arb_bets
@@ -155,4 +203,3 @@ if __name__ == '__main__':
     start = time.perf_counter()
     all_arb_bets = find_arbitrage(mental_model)
     print(all_arb_bets)
-    print(f'Finished v4 in {time.perf_counter() - start}s')

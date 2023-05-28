@@ -1,10 +1,13 @@
 import time
 import json
-from multiprocessing import Process, Manager
+from multiprocessing import Process, Manager, Queue
 from selenium import webdriver
+import logging
+import threading
+from logging.handlers import QueueHandler
 
 from arbitrage import find_arbitrage
-from util import BookieSite
+from util import BookieSite, get_logger
 from fanduel import FanduelController
 from draftkings import DraftKingsController
 
@@ -14,9 +17,11 @@ CONTROLLER_OBJ_MAP = {
 }
 
 
-def thread_provisioner(bookie_site, shared_dict, key, event, bet_dict, controller):
-    print(f'Thread {key} starting monitoring of {bookie_site}')
-    controller.startup()
+def thread_provisioner(bookie_site, shared_dict, key, event, bet_dict, controller, queue):
+    logger = get_logger(queue, key)
+
+    logger.debug(f'Thread {key} starting monitoring of {bookie_site}')
+    controller.startup(queue, key)
     controller.run_main_loop(shared_dict, event, bet_dict)
 
 
@@ -63,9 +68,11 @@ def json_dump_games_dict(games_dict):
     return json.dumps({str(k): v for k, v in games_dict.items()})
 
 
-def analyze_data(shared_dict, events_dict, bet_dicts, controller_dict):
+def analyze_data(shared_dict, events_dict, bet_dicts, controller_dict, queue, key):
+    logger = get_logger(queue, key)
 
     cur_serialized_mental_model = dict()
+    did_find_arb = False
 
     while True:
 
@@ -90,14 +97,17 @@ def analyze_data(shared_dict, events_dict, bet_dicts, controller_dict):
             for key in cur_serialized_mental_model:
                 mental_model[key] = json.loads(cur_serialized_mental_model[key])
 
-            print(mental_model)
-
             all_arb_bets = find_arbitrage(mental_model)  # TODO this is the real one
             # all_arb_bets = [((BookieSite.DRAFTKINGS, 'kia tigers', '-111'), (BookieSite.FANDUEL, 'lg twins', '+125'))]  # TODO this is a test one to guarantee an arb
 
             if len(all_arb_bets) > 0:
                 # TODO trigger threads to place these bets. I need to make sure it can handle when len(all_arb_bets) > 1 and I need to place multiple bets on the same site
+                logger.info(f'ARBITRAGE FOUND! all_arb_bets = {all_arb_bets}')
+                did_find_arb = True
                 x = 1
+            elif did_find_arb:
+                logger.info(f'ARB GONE NOW.')
+                did_find_arb = False
 
             # events_dict[BookieSite.FANDUEL].set()  # just for testing, remove later
             x = 1
@@ -136,6 +146,21 @@ def main():
     bookie_sites = list(BookieSite.__members__.values())
 
     with Manager() as manager:
+        # Create a queue
+        queue = manager.Queue(-1)
+
+        # Create a handler that writes to the console
+        console_handler = logging.StreamHandler()
+        formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(filename)s - %(message)s')
+        console_handler.setFormatter(formatter)
+        console_handler.setLevel(logging.DEBUG)
+
+        # Create a logging handler that listens to the queue and sends events to the file handler
+        queue_listener = logging.handlers.QueueListener(queue, console_handler)
+
+        # Start the listener
+        queue_listener.start()
+
         # Create shared dictionary
         shared_dict = manager.dict()
 
@@ -151,10 +176,10 @@ def main():
         events_dict = {k: v for k, v in zip(bookie_sites, events_lst)}
 
         # Create processes for provisioning threads
-        processes = [Process(target=thread_provisioner, args=(site, shared_dict, i, event, bet_dict, controller)) for i, (site, event, controller) in enumerate(zip(bookie_sites, events_lst, controller_objs))]
+        processes = [Process(target=thread_provisioner, args=(site, shared_dict, i, event, bet_dict, controller, queue)) for i, (site, event, controller) in enumerate(zip(bookie_sites, events_lst, controller_objs))]
 
         # Create process for analyzing data
-        processes.append(Process(target=analyze_data, args=(shared_dict, events_dict, bet_dict, controller_dict)))
+        processes.append(Process(target=analyze_data, args=(shared_dict, events_dict, bet_dict, controller_dict, queue, len(processes))))
 
         # Start all processes
         for p in processes:
@@ -163,6 +188,10 @@ def main():
         # Wait for all processes to finish
         for p in processes:
             p.join()
+
+        # Stop the queue listener
+        queue_listener.stop()
+
 
 
 if __name__ == "__main__":

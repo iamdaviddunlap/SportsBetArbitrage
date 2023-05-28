@@ -6,7 +6,7 @@ from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 
-from util import get_driver, BookieSite
+from util import get_driver, BookieSite, get_logger
 
 
 def beautifulsoup_obj_to_selenium(bs_obj, driver):
@@ -88,12 +88,15 @@ def parse_page(driver):
 class FanduelController:
     def __init__(self, target_sport):
         self.driver = None
+        self.logger = None
         self.target_sport = target_sport
         self.games_dict = None
         self.buttons_dict = None
         self.bookie_site_enum = BookieSite.FANDUEL
 
-    def startup(self):
+    def startup(self, queue, key):
+        self.logger = get_logger(queue, key)
+
         self.driver = get_driver()
 
         self.driver.get('https://co.sportsbook.fanduel.com/live')
@@ -113,7 +116,7 @@ class FanduelController:
                 (By.XPATH, "//span[contains(@style, 'background-color: rgb(0, 95, 200);')]"))
         )
 
-        print(f'Completed startup.')
+        self.logger.info(f'Completed startup.')
 
     def place_bet(self, team_name, expected_moneyline, bet_amount):
         bet_button_bs = self.buttons_dict[team_name]
@@ -130,12 +133,12 @@ class FanduelController:
             except:
                 pass
         if bet_button_sel is None:
-            print(f'NOT PLACING BET because cannot find matching bet button for {team_name}')
+            self.logger.error(f'NOT PLACING BET because cannot find matching bet button for {team_name}')
             return False
 
         actual_odds = bet_button_sel.text
         if expected_moneyline != actual_odds:
-            print(f'NOT PLACING BET because mismatch of odds: expected {expected_moneyline} but is now {actual_odds}')
+            self.logger.error(f'NOT PLACING BET because mismatch of odds: expected {expected_moneyline} but is now {actual_odds}')
             return False
         bet_button_sel.click()
         time.sleep(1)
@@ -157,7 +160,7 @@ class FanduelController:
         submit_button_sel = sel_objs[0]
 
         if 'log in' in submit_button_sel.accessible_name.lower():
-            print(f'NOT PLACING BET because not logged in.')
+            self.logger.error(f'NOT PLACING BET because not logged in.')
             return False
         # TODO implement clicking the bet button and anything that happens after that
         # return True
@@ -189,7 +192,7 @@ class FanduelController:
                     self.games_dict = games_dict
                     self.buttons_dict = buttons_dict
                     shared_dict[self.bookie_site_enum] = json.dumps(games_dict)
-                    print(f'parsed page in {round(time.time() - start_time, 3)}s. games_dict: \n{games_dict}')
+                    self.logger.debug(f'parsed page in {round(time.time() - start_time, 3)}s. games_dict: \n{games_dict}')
 
                     # TODO the following block of code tests placing a bet of $10 on the first valid bet on the page
                     # amount = 10
@@ -199,7 +202,7 @@ class FanduelController:
                     # did_place_bet = self.place_bet(valid_team_key, expected_moneyline, amount)
 
             except Exception as e:
-                print(f'!!! Got exception after {round(time.time() - start_time, 3)}s: {e}')
+                self.logger.error(f'!!! Got exception after {round(time.time() - start_time, 3)}s: {e}')
             x = 1
 
 
